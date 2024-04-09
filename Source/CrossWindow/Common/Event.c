@@ -82,19 +82,22 @@ XwEvent *xw_event_close_window (XwEvent *e, XwWindow *win) {
 }
 
 /**
- * @b Create a new event of type @c XW_EVENT_TYPE_OPEN_WINDOW
+ * @b Create a new event of type @c XW_EVENT_TYPE_VISIBILITY
  *
  * @param e Event
+ * @param visible True if window is visible after this event. False otherwise.
  * @param win Window 
  *
  * @return XwEvent* on success
  * @return Null otherwise
  * */
-XwEvent *xw_event_open_window (XwEvent *e, XwWindow *win) {
+XwEvent *xw_event_visibility (XwEvent *e, Bool visible, XwWindow *win) {
     RETURN_VALUE_IF (!e || !win, Null, ERR_INVALID_ARGUMENTS);
 
-    e = xw_event_init (e, XW_EVENT_TYPE_OPEN_WINDOW, win);
+    e = xw_event_init (e, XW_EVENT_TYPE_VISIBILITY, win);
     RETURN_VALUE_IF (!e, Null, ERR_INVALID_OBJECT_REF);
+
+    e->visibility.visible = visible;
 
     return e;
 }

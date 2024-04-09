@@ -86,6 +86,9 @@ XwWindow *xw_window_init (
 XwWindow *xw_window_deinit (XwWindow *self);
 void      xw_window_destroy (XwWindow *self);
 
+XwWindow* xw_window_show(XwWindow* self);
+XwWindow* xw_window_hide(XwWindow* self);
+
 CString       xw_window_get_title (XwWindow *self);
 XwWindowSize  xw_window_get_size (XwWindow *self);
 XwWindowSize  xw_window_get_max_size (XwWindow *self);

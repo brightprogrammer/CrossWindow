@@ -199,6 +199,40 @@ void xw_window_destroy (XwWindow *self) {
 }
 
 /**
+ * @b Change window's visibility to visible.
+ *
+ * @param self
+ *
+ * @return @c self on success.
+ * @return Null otherwise.
+ * */
+XwWindow *xw_window_show (XwWindow *self) {
+    RETURN_VALUE_IF (!self, Null, ERR_INVALID_ARGUMENTS);
+
+    xcb_map_window (xw_state.connection, self->xcb_window_id);
+    xcb_flush (xw_state.connection);
+
+    return self;
+}
+
+/**
+ * @b Change window's visibility to invisible.
+ *
+ * @param self
+ *
+ * @return @c self on success.
+ * @return Null otherwise.
+ * */
+XwWindow *xw_window_hide (XwWindow *self) {
+    RETURN_VALUE_IF (!self, Null, ERR_INVALID_ARGUMENTS);
+
+    xcb_unmap_window (xw_state.connection, self->xcb_window_id);
+    xcb_flush (xw_state.connection);
+
+    return self;
+}
+
+/**
  * @b Get title string of given window.
  *
  * User must free the returend pointer to title string after use.

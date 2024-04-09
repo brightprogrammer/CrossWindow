@@ -68,6 +68,36 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
     e->type = XW_EVENT_TYPE_NONE;
 
     switch (event_code) {
+        /* Generated when a window is mapped onto screen. 
+         * REF : https://tronche.com/gui/x/xlib/events/window-state-change/map.html
+         * */
+        case XCB_MAP_NOTIFY : {
+            xcb_map_notify_event_t *notify = (xcb_map_notify_event_t *)xcb_event;
+
+            /* find window associated with given event */
+            XwWindow *window = xw_get_window_by_xcb_id (notify->window);
+            GOTO_HANDLER_IF (!window, WINDOW_SEARCH_FAILED, ERR_WINDOW_SEARCH_FAILED);
+
+            e = xw_event_visibility (e, True, window);
+
+            break;
+        }
+        
+        /* Generated when a window is unmapped onto screen. 
+         * REF : https://tronche.com/gui/x/xlib/events/window-state-change/map.html
+         * */
+        case XCB_UNMAP_NOTIFY : {
+            xcb_unmap_notify_event_t *notify = (xcb_unmap_notify_event_t *)xcb_event;
+
+            /* find window associated with given event */
+            XwWindow *window = xw_get_window_by_xcb_id (notify->window);
+            GOTO_HANDLER_IF (!window, WINDOW_SEARCH_FAILED, ERR_WINDOW_SEARCH_FAILED);
+
+            e = xw_event_visibility (e, False, window);
+
+            break;
+        }
+
         /* REF : https://tronche.com/gui/x/xlib/events/input-focus/ */
         case XCB_FOCUS_IN : {
             xcb_focus_in_event_t *fin = (xcb_focus_in_event_t *)xcb_event;

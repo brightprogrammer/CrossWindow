@@ -11,8 +11,8 @@
 #ifndef CROSSWINDOW_EVENT_H
 #define CROSSWINDOW_EVENT_H
 
-#include <Types.h>
 #include <CrossWindow/Window.h>
+#include <Types.h>
 
 /**
  * @b Various types of events in CrossWindow.
@@ -21,7 +21,7 @@ typedef enum XwEventType {
     XW_EVENT_TYPE_NONE = 0,
     XW_EVENT_TYPE_STATE_CHANGE, /**< @b State like hidden, maximized etc... @sa XwWindowStateMask */
     XW_EVENT_TYPE_CLOSE_WINDOW, /**< @b Closing a window. */
-    XW_EVENT_TYPE_OPEN_WINDOW,  /**< @b Creating a window. */
+    XW_EVENT_TYPE_VISIBILITY,   /**< @b Window is visible or invisible suddenly */
     XW_EVENT_TYPE_ENTER,        /**< @b Mouse enter the window. Focus is not gained yet. */
     XW_EVENT_TYPE_LEAVE,        /**< @b Mouse leaves the window. Focus may not be lost yet. */
     XW_EVENT_TYPE_FOCUS,        /**< @b Focus/Unfocus on a window. */
@@ -59,6 +59,13 @@ typedef enum XwEventType {
 typedef struct XwStateChangeEvent {
     XwWindowState new_state; /**< @b New window state. */
 } XwStateChangeEvent;
+
+/**
+ * @b Window's visibility just changed.
+ * */
+typedef struct XwVisibilityEvent {
+    Bool visible; /**< @b True if window is visible, @c False otherwise. */
+} XwVisibilityEvent;
 
 /**
  * @b Mouse either enters or leaves window boundaries.
@@ -463,6 +470,7 @@ typedef struct XwEvent {
 
     union {
         XwStateChangeEvent       state_change;
+        XwVisibilityEvent        visibility;
         XwEnterEvent             enter;
         XwLeaveEvent             leave;
         XwFocusEvent             focus;
@@ -484,8 +492,8 @@ XwEvent *xw_event_poll (XwEvent *event);
 XwEvent *xw_event_wait (XwEvent *event);
 
 XwEvent *xw_event_state_change (XwEvent *event, XwWindowState new_state, XwWindow *win);
+XwEvent *xw_event_visibility (XwEvent *event, Bool visible, XwWindow *win);
 XwEvent *xw_event_close_window (XwEvent *event, XwWindow *win);
-XwEvent *xw_event_open_window (XwEvent *event, XwWindow *win);
 XwEvent *xw_event_enter (XwEvent *event, Uint32 x, Uint32 y, XwWindow *win);
 XwEvent *xw_event_leave (XwEvent *event, Uint32 x, Uint32 y, XwWindow *win);
 XwEvent *xw_event_focus (XwEvent *event, Bool focused, XwWindow *win);
