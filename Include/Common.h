@@ -120,6 +120,16 @@
         }                                                                                          \
     } while (0)
 
+#define CALL_HANDLER_IF(cond, handler, ...)                                                        \
+    do {                                                                                           \
+        if ((cond)) {                                                                              \
+            fputs (__FUNCTION__, stderr);                                                          \
+            fputs (" : ", stderr);                                                                 \
+            fprintf (stderr, __VA_ARGS__);                                                         \
+            handler;                                                                               \
+        }                                                                                          \
+    } while (0)
+
 #define ABORT_IF(cond, ...)                                                                        \
     do {                                                                                           \
         if ((cond)) {                                                                              \
