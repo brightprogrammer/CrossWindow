@@ -1,6 +1,3 @@
-find_package(PkgConfig)
-pkg_check_modules(XCB REQUIRED xcb xcb-keysyms)
-
 # Vulkan is already found in Source/CMakeLists.txt
 
 file(GLOB_RECURSE CROSSWINDOW_XCB_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR} *.c)

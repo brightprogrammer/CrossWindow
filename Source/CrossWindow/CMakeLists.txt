@@ -7,7 +7,7 @@ add_subdirectory(Common)
 # dependent library
 add_library(crosswindow INTERFACE)
 
-pkg_check_modules(XCB xcb xcb-keysyms)
+pkg_check_modules(XCB xcb xcb-keysyms xcb-icccm)
 if(${XCB_FOUND})
   add_subdirectory(Platform/XCB)
   target_link_libraries(crosswindow INTERFACE crosswindow_xcb)

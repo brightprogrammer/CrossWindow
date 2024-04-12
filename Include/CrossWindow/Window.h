@@ -56,22 +56,22 @@ typedef Uint16 XwWindowState;
  * @b Closely follows this : https://specifications.freedesktop.org/wm-spec/latest/ar01s05.html#idm46025198457920
  * */
 typedef enum XwWindowStateMask : XwWindowState {
-    XW_WINDOW_STATE_MASK_UNKNOWN        = 0,
-    XW_WINDOW_STATE_MASK_MODAL          = (1 << 0),
-    XW_WINDOW_STATE_MASK_STICKY         = (1 << 1),
-    XW_WINDOW_STATE_MASK_MAXIMIZED_VERT = (1 << 2),
-    XW_WINDOW_STATE_MASK_MAXIMIZED_HORZ = (1 << 3),
+    XW_WINDOW_STATE_MASK_CLEAR          = 0,            /* state is empty, nothing is set */
+    XW_WINDOW_STATE_MASK_MODAL          = (1 << 0),     /* make modal */
+    XW_WINDOW_STATE_MASK_STICKY         = (1 << 1),     /* make it stick to top */
+    XW_WINDOW_STATE_MASK_MAXIMIZED_VERT = (1 << 2),     /* maximize it vertically */
+    XW_WINDOW_STATE_MASK_MAXIMIZED_HORZ = (1 << 3),     /* maximize it horizontally */
     XW_WINDOW_STATE_MASK_MAXIMIZED =
         XW_WINDOW_STATE_MASK_MAXIMIZED_VERT | XW_WINDOW_STATE_MASK_MAXIMIZED_HORZ,
-    XW_WINDOW_STATE_MASK_SHADED            = (1 << 4),
-    XW_WINDOW_STATE_MASK_SKIP_TASKBAR      = (1 << 5),
-    XW_WINDOW_STATE_MASK_SKIP_PAGER        = (1 << 6),
-    XW_WINDOW_STATE_MASK_HIDDEN            = (1 << 7),
-    XW_WINDOW_STATE_MASK_FULLSCREEN        = (1 << 8),
-    XW_WINDOW_STATE_MASK_ABOVE             = (1 << 9),
-    XW_WINDOW_STATE_MASK_BELOW             = (1 << 10),
-    XW_WINDOW_STATE_MASK_DEMANDS_ATTENTION = (1 << 11),
-    XW_WINDOW_STATE_MASK_FOCUSED           = (1 << 12)
+    XW_WINDOW_STATE_MASK_SHADED            = (1 << 4),  /* shade (just show titlebar) */
+    XW_WINDOW_STATE_MASK_SKIP_TASKBAR      = (1 << 5),  /* don't show on tasbar? */
+    XW_WINDOW_STATE_MASK_SKIP_PAGER        = (1 << 6),  /* don't show in ALT+TAB? */
+    XW_WINDOW_STATE_MASK_HIDDEN            = (1 << 7),  /* set window in hidden state */
+    XW_WINDOW_STATE_MASK_FULLSCREEN        = (1 << 8),  /* make fullscreen */
+    XW_WINDOW_STATE_MASK_ABOVE             = (1 << 9),  /* reorder to above */
+    XW_WINDOW_STATE_MASK_BELOW             = (1 << 10), /* reorder to below */
+    XW_WINDOW_STATE_MASK_DEMANDS_ATTENTION = (1 << 11), /* needs attention (blinking window) */
+    XW_WINDOW_STATE_MASK_FOCUSED           = (1 << 12)  /* set focused */
 } XwWindowStateMask;
 
 /**
@@ -83,9 +83,37 @@ typedef enum XwWindowStateMask : XwWindowState {
 typedef struct XwWindowPlatformData XwWindowPlatformData;
 
 /**
- * @b This struct derives from @c XwWindowPlatformData. Contains window 
- *    attributes like size, position, etc...
- * 
+ * @b Made from bitwise OR of following action permission masks.
+ *
+ * This indicates what actions are allowed on a window. If a flag is set,
+ * then that action is allowed, if a flag is unset then it isn't allowed
+ * */
+typedef Uint16 XwWindowActionPermissions;
+
+/**
+ * @b Each flag denotes an allowed action permission to window.
+ * */
+typedef enum XwWindowActionPermissionMask : XwWindowActionPermissions {
+    XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR         = 0,          /* no actions allowed! */
+    XW_WINDOW_ACTION_PERMISSION_MASK_MOVE          = (1 << 0),   /* is movable */
+    XW_WINDOW_ACTION_PERMISSION_MASK_RESIZE        = (1 << 1),   /* is resizable */
+    XW_WINDOW_ACTION_PERMISSION_MASK_MINIMIZE      = (1 << 2),   /* is minimizable */
+    XW_WINDOW_ACTION_PERMISSION_MASK_SHADE         = (1 << 3),   /* can be shaded */
+    XW_WINDOW_ACTION_PERMISSION_MASK_STICK         = (1 << 4),   /* can be sticky to top */
+    XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_HORZ = (1 << 5),   /* can be maximized horizontally */
+    XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_VERT = (1 << 6),   /* can be maximized vertically */
+    XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE = XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_VERT |
+                                                XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_HORZ,
+    XW_WINDOW_ACTION_PERMISSION_MASK_FULLSCREEN     = (1 << 7),  /* can go fullscreen */
+    XW_WINDOW_ACTION_PERMISSION_MASK_CHANGE_DESKTOP = (1 << 8),  /* can change desktop */
+    XW_WINDOW_ACTION_PERMISSION_MASK_CLOSE          = (1 << 9),  /* is closable */
+    XW_WINDOW_ACTION_PERMISSION_MASK_ABOVE          = (1 << 10), /* can reorder to above */
+    XW_WINDOW_ACTION_PERMISSION_MASK_BELOW          = (1 << 11), /* can reorder to below */
+} XwWindowActionMask;
+
+/**
+ * @b Platform dependent opaque window.
+ *
  * The struct is opaque because access to it's members must be controlled.
  * One cannot just alter the window data, as this will result in loss of 
  * data synchronicity between the platform window data and data stored inside
@@ -111,12 +139,13 @@ void      xw_window_destroy (XwWindow *self);
 XwWindow *xw_window_show (XwWindow *self);
 XwWindow *xw_window_hide (XwWindow *self);
 
-CString       xw_window_get_title (XwWindow *self);
-XwWindowSize  xw_window_get_size (XwWindow *self);
-XwWindowSize  xw_window_get_max_size (XwWindow *self);
-XwWindowSize  xw_window_get_min_size (XwWindow *self);
-XwWindowPos   xw_window_get_pos (XwWindow *self);
-XwWindowState xw_window_get_state (XwWindow *self);
+CString                   xw_window_get_title (XwWindow *self);
+XwWindowSize              xw_window_get_size (XwWindow *self);
+XwWindowSize              xw_window_get_max_size (XwWindow *self);
+XwWindowSize              xw_window_get_min_size (XwWindow *self);
+XwWindowPos               xw_window_get_pos (XwWindow *self);
+XwWindowState             xw_window_get_state (XwWindow *self);
+XwWindowActionPermissions xw_window_get_action_permissions (XwWindow *self);
 
 CString      xw_window_set_title (XwWindow *self, CString title);
 XwWindowSize xw_window_set_size (XwWindow *self, XwWindowSize size);
@@ -125,5 +154,7 @@ XwWindowSize xw_window_set_min_size (XwWindow *self, XwWindowSize size);
 XwWindowPos  xw_window_set_pos (XwWindow *self, XwWindowPos pos);
 /* TODO : Does not work for XCB */
 XwWindowState xw_window_set_state (XwWindow *self, XwWindowState state);
+XwWindowActionPermissions
+    xw_window_set_action_permissions (XwWindow *self, XwWindowActionPermissions permissions);
 
 #endif // CROSSWINDOW_WINDOW_H

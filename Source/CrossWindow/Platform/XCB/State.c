@@ -31,9 +31,9 @@
  * */
 
 #include <Common.h>
-#include <Types.h>
-#include <CrossWindow/Window.h>
 #include <CrossWindow/Event.h>
+#include <CrossWindow/Window.h>
+#include <Types.h>
 
 /* local includes */
 #include "State.h"
@@ -86,6 +86,20 @@ XwState xw_state = {0};
 #define _NET_WM_STATE_BELOW_ATOM_NAME             "_NET_WM_STATE_BELOW"
 #define _NET_WM_STATE_DEMANDS_ATTENTION_ATOM_NAME "_NET_WM_STATE_DEMANDS_ATTENTION"
 #define _NET_WM_STATE_FOCUSED_ATOM_NAME           "_NET_WM_STATE_FOCUSED"
+
+#define _NET_WM_ALLOWED_ACTIONS_ATOM_NAME       "_NET_WM_ALLOWED_ACTIONS"
+#define _NET_WM_ACTION_MOVE_ATOM_NAME           "_NET_WM_ACTION_MOVE"
+#define _NET_WM_ACTION_RESIZE_ATOM_NAME         "_NET_WM_ACTION_RESIZE"
+#define _NET_WM_ACTION_MINIMIZE_ATOM_NAME       "_NET_WM_ACTION_MINIMIZE"
+#define _NET_WM_ACTION_SHADE_ATOM_NAME          "_NET_WM_ACTION_SHADE"
+#define _NET_WM_ACTION_STICK_ATOM_NAME          "_NET_WM_ACTION_STICK"
+#define _NET_WM_ACTION_MAXIMIZE_HORZ_ATOM_NAME  "_NET_WM_ACTION_MAXIMIZE_HORZ"
+#define _NET_WM_ACTION_MAXIMIZE_VERT_ATOM_NAME  "_NET_WM_ACTION_MAXIMIZE_VERT"
+#define _NET_WM_ACTION_FULLSCREEN_ATOM_NAME     "_NET_WM_ACTION_FULLSCREEN"
+#define _NET_WM_ACTION_CHANGE_DESKTOP_ATOM_NAME "_NET_WM_ACTION_CHANGE_DESKTOP"
+#define _NET_WM_ACTION_CLOSE_ATOM_NAME          "_NET_WM_ACTION_CLOSE"
+#define _NET_WM_ACTION_ABOVE_ATOM_NAME          "_NET_WM_ACTION_ABOVE"
+#define _NET_WM_ACTION_BELOW_ATOM_NAME          "_NET_WM_ACTION_BELOW"
 
 static xcb_atom_t xw_get_xcb_atom (CString atom_name);
 
@@ -140,6 +154,24 @@ CONSTRUCTOR Bool xw_init (void) {
     xw_state._NET_WM_STATE_DEMANDS_ATTENTION =
         xw_get_xcb_atom (_NET_WM_STATE_DEMANDS_ATTENTION_ATOM_NAME);
     xw_state._NET_WM_STATE_FOCUSED = xw_get_xcb_atom (_NET_WM_STATE_FOCUSED_ATOM_NAME);
+
+    /* get allowed action atoms */
+    xw_state._NET_WM_ALLOWED_ACTIONS = xw_get_xcb_atom (_NET_WM_ALLOWED_ACTIONS_ATOM_NAME);
+    xw_state._NET_WM_ACTION_MOVE     = xw_get_xcb_atom (_NET_WM_ACTION_MOVE_ATOM_NAME);
+    xw_state._NET_WM_ACTION_RESIZE   = xw_get_xcb_atom (_NET_WM_ACTION_RESIZE_ATOM_NAME);
+    xw_state._NET_WM_ACTION_MINIMIZE = xw_get_xcb_atom (_NET_WM_ACTION_MINIMIZE_ATOM_NAME);
+    xw_state._NET_WM_ACTION_SHADE    = xw_get_xcb_atom (_NET_WM_ACTION_SHADE_ATOM_NAME);
+    xw_state._NET_WM_ACTION_STICK    = xw_get_xcb_atom (_NET_WM_ACTION_STICK_ATOM_NAME);
+    xw_state._NET_WM_ACTION_MAXIMIZE_HORZ =
+        xw_get_xcb_atom (_NET_WM_ACTION_MAXIMIZE_HORZ_ATOM_NAME);
+    xw_state._NET_WM_ACTION_MAXIMIZE_VERT =
+        xw_get_xcb_atom (_NET_WM_ACTION_MAXIMIZE_VERT_ATOM_NAME);
+    xw_state._NET_WM_ACTION_FULLSCREEN = xw_get_xcb_atom (_NET_WM_ACTION_FULLSCREEN_ATOM_NAME);
+    xw_state._NET_WM_ACTION_CHANGE_DESKTOP =
+        xw_get_xcb_atom (_NET_WM_ACTION_CHANGE_DESKTOP_ATOM_NAME);
+    xw_state._NET_WM_ACTION_CLOSE = xw_get_xcb_atom (_NET_WM_ACTION_CLOSE_ATOM_NAME);
+    xw_state._NET_WM_ACTION_ABOVE = xw_get_xcb_atom (_NET_WM_ACTION_ABOVE_ATOM_NAME);
+    xw_state._NET_WM_ACTION_BELOW = xw_get_xcb_atom (_NET_WM_ACTION_BELOW_ATOM_NAME);
 
     return True;
 
@@ -406,7 +438,7 @@ static xcb_atom_t xw_get_xcb_atom (CString atom_name) {
 
 /* error handlers */
 ATOM_IS_NONE:
-    FREE(reply);
+    FREE (reply);
 ATOM_REPLY_FAILED:
     exit (EXIT_FAILURE);
 }

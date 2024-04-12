@@ -31,10 +31,11 @@
  * */
 
 #include <Common.h>
+#include <Types.h>
 
 /* local headers */
+#include "CrossWindow/Window.h"
 #include "State.h"
-#include "Types.h"
 #include "Window.h"
 
 /* libc headers */
@@ -42,6 +43,7 @@
 
 /* xcb related headers */
 #include <xcb/xcb.h>
+#include <xcb/xcb_icccm.h>
 #include <xcb/xproto.h>
 
 
@@ -336,12 +338,77 @@ XwWindowPos xw_window_get_pos (XwWindow *self) {
  *
  * @param self @c XwWindow object to get state of.
  * 
- * @return @c XW_WINDOW_STATE_UNKNOWN on failure or if state is not known,
+ * @return @c XW_WINDOW_STATE_CLEAR on failure or if state is not known,
  * @return Any other value less than @x XW_WINDOW_STATE_MAX on success.
  * */
 XwWindowState xw_window_get_state (XwWindow *self) {
-    RETURN_VALUE_IF (!self, XW_WINDOW_STATE_MASK_UNKNOWN, ERR_INVALID_ARGUMENTS);
+    RETURN_VALUE_IF (!self, XW_WINDOW_STATE_MASK_CLEAR, ERR_INVALID_ARGUMENTS);
     return self->state;
+}
+
+/**
+ * @b Get bitmask of currently allowed window permissions.
+ *
+ * @param self 
+ *
+ * @return @c XwWindowActionPermissions on success.
+ * @return @c XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR otherwise.
+ * */
+XwWindowActionPermissions xw_window_get_action_permissions (XwWindow *self) {
+    RETURN_VALUE_IF (!self, XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR, ERR_INVALID_ARGUMENTS);
+
+    /* unlike window state, it's better to get this everytime */
+
+    struct {
+        xcb_atom_t                atom;
+        XwWindowActionPermissions mask;
+    } atoms[] = {
+        {          xw_state._NET_WM_ACTION_MOVE,           XW_WINDOW_ACTION_PERMISSION_MASK_MOVE},
+        {        xw_state._NET_WM_ACTION_RESIZE,         XW_WINDOW_ACTION_PERMISSION_MASK_RESIZE},
+        {      xw_state._NET_WM_ACTION_MINIMIZE,       XW_WINDOW_ACTION_PERMISSION_MASK_MINIMIZE},
+        {         xw_state._NET_WM_ACTION_SHADE,          XW_WINDOW_ACTION_PERMISSION_MASK_SHADE},
+        {         xw_state._NET_WM_ACTION_STICK,          XW_WINDOW_ACTION_PERMISSION_MASK_STICK},
+        { xw_state._NET_WM_ACTION_MAXIMIZE_HORZ,  XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_HORZ},
+        { xw_state._NET_WM_ACTION_MAXIMIZE_VERT,  XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_VERT},
+        {    xw_state._NET_WM_ACTION_FULLSCREEN,     XW_WINDOW_ACTION_PERMISSION_MASK_FULLSCREEN},
+        {xw_state._NET_WM_ACTION_CHANGE_DESKTOP, XW_WINDOW_ACTION_PERMISSION_MASK_CHANGE_DESKTOP},
+        {         xw_state._NET_WM_ACTION_CLOSE,          XW_WINDOW_ACTION_PERMISSION_MASK_CLOSE},
+        {         xw_state._NET_WM_ACTION_ABOVE,          XW_WINDOW_ACTION_PERMISSION_MASK_ABOVE},
+        {         xw_state._NET_WM_ACTION_BELOW,          XW_WINDOW_ACTION_PERMISSION_MASK_BELOW},
+    };
+
+    xcb_get_property_cookie_t cookie = xcb_get_property (
+        xw_state.connection,              /* connection */
+        False,                            /* delete */
+        self->xcb_window_id,              /* window */
+        xw_state._NET_WM_ALLOWED_ACTIONS, /* property */
+        XCB_ATOM_ATOM,                    /* type */
+        0,                                /* offset */
+        UINT32_MAX                        /* length */
+    );
+
+    xcb_get_property_reply_t *reply = xcb_get_property_reply (xw_state.connection, cookie, Null);
+    RETURN_VALUE_IF (
+        !reply,
+        XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR,
+        "Failed to get action permissions from window.\n"
+    );
+
+    Size        atom_count = xcb_get_property_value_length (reply);
+    xcb_atom_t *actions    = xcb_get_property_value (reply);
+
+    /* create flag out of retrieved property */
+    XwWindowActionPermissions permissions = XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR;
+    for (Size s = 0; s < atom_count; s++) {
+        for (Size a = 0; a < ARRAY_SIZE (atoms); a++) {
+            if (actions[s] == atoms[a].atom) {
+                permissions |= atoms[a].mask;
+            }
+        }
+    }
+
+    FREE (reply);
+    return permissions;
 }
 
 /**
@@ -434,6 +501,21 @@ XwWindowSize xw_window_set_min_size (XwWindow *self, XwWindowSize size) {
         ((XwWindowSize) {0, 0}),
         "Min size bound cannot be greater than max size bound of window\n"
     );
+
+    /* prepare hints */
+    xcb_size_hints_t hints;
+    xcb_icccm_size_hints_set_min_size (&hints, size.width, size.height);
+
+    /* set hints */
+    xcb_icccm_set_wm_size_hints (
+        xw_state.connection,
+        self->xcb_window_id,
+        XCB_ATOM_WM_NORMAL_HINTS,
+        &hints
+    );
+
+    xcb_flush (xw_state.connection);
+
     return (self->min_size = size);
 }
 
@@ -451,6 +533,21 @@ XwWindowSize xw_window_set_max_size (XwWindow *self, XwWindowSize size) {
         ((XwWindowSize) {0, 0}),
         "Max size bound cannot be less than min size bound of window\n"
     );
+
+    /* prepare hints */
+    xcb_size_hints_t hints;
+    xcb_icccm_size_hints_set_max_size (&hints, size.width, size.height);
+
+    /* set hints */
+    xcb_icccm_set_wm_size_hints (
+        xw_state.connection,
+        self->xcb_window_id,
+        XCB_ATOM_WM_NORMAL_HINTS,
+        &hints
+    );
+
+    xcb_flush (xw_state.connection);
+
     return (self->max_size = size);
 }
 
@@ -487,10 +584,10 @@ XwWindowPos xw_window_set_pos (XwWindow *self, XwWindowPos pos) {
  *
  * @return @c XwWindowStateMask as mask of all states that were set on success.
  *         Mostly this is exactly same as provided state.
- * @return @c XW_WINDOW_STATE_MASK_UNKNOWN on failure.
+ * @return @c XW_WINDOW_STATE_MASK_CLEAR on failure.
  * */
 XwWindowState xw_window_set_state (XwWindow *self, XwWindowState state) {
-    RETURN_VALUE_IF (!self || !state, XW_WINDOW_STATE_MASK_UNKNOWN, ERR_INVALID_ARGUMENTS);
+    RETURN_VALUE_IF (!self, XW_WINDOW_STATE_MASK_CLEAR, ERR_INVALID_ARGUMENTS);
 
     /* create pairing of atom with it's mask */
     struct {
@@ -512,24 +609,47 @@ XwWindowState xw_window_set_state (XwWindow *self, XwWindowState state) {
         {          xw_state._NET_WM_STATE_FOCUSED,           XW_WINDOW_STATE_MASK_FOCUSED},
     };
 
-    /* fill data array */
-    xcb_client_message_data_t data[ARRAY_SIZE (atoms)];
-    for (Size i = 0; i < ARRAY_SIZE (atoms); i++) {
-        data[i].data32[0] = (state & atoms[i].mask) ? _NET_WM_STATE_ADD : _NET_WM_STATE_REMOVE;
-        data[i].data32[1] = atoms[i].atom;
-        data[i].data32[2] = XCB_ATOM_NONE; /* source indicator */
-    }
+    /* reset _NET_WM_STATE atom array */
+    xcb_change_property (
+        xw_state.connection,    /* conn*/
+        XCB_PROP_MODE_REPLACE,  /* mode */
+        self->xcb_window_id,    /* window */
+        xw_state._NET_WM_STATE, /* property */
+        XCB_ATOM_ATOM,          /* type */
+        32,                     /* format */
+        0,                      /* length */
+        Null                    /* data */
+    );
 
-    /* send event for each mask */
-    for (Size s = 0; s < ARRAY_SIZE (data); s++) {
+    for (Size i = 0; i < ARRAY_SIZE (atoms); i++) {
+        /* append to state if mask is set */
+        if (state & atoms[i].mask) {
+            xcb_change_property (
+                xw_state.connection,    /* conn*/
+                XCB_PROP_MODE_APPEND,   /* mode */
+                self->xcb_window_id,    /* window */
+                xw_state._NET_WM_STATE, /* property */
+                XCB_ATOM_ATOM,          /* type */
+                32,                     /* format */
+                1,                      /* length */
+                &atoms[i].atom          /* data */
+            );
+        }
+
+        /* fill data array */
+        xcb_client_message_data_t data;
+        data.data32[0] = (state & atoms[i].mask) ? _NET_WM_STATE_ADD : _NET_WM_STATE_REMOVE;
+        data.data32[1] = atoms[i].atom;
+        data.data32[2] = XCB_ATOM_NONE; /* source indicator */
+
+        /* prepare event and send event */
         xcb_client_message_event_t payload = {
             .response_type = XCB_CLIENT_MESSAGE,
             .type          = xw_state._NET_WM_STATE,
             .format        = 32,
             .window        = self->xcb_window_id,
-            .data          = data[s]
+            .data          = data
         };
-
         xcb_send_event (
             xw_state.connection,
             False,               /* whether to propagate the event or not */
@@ -543,6 +663,74 @@ XwWindowState xw_window_set_state (XwWindow *self, XwWindowState state) {
     self->state = state;
 
     return state;
+}
+
+/**
+ * @b Set window action permissions.
+ *
+ * At this point, I don't even know whether this is possible. Because this is not 
+ * working for now.
+ * I basically created this to set whether window can be resized or not, but
+ * it seems like we can achieve this even by setting min and max size to same values.
+ *
+ * TODO: fix this
+ *
+ * @return @c permissions on success.
+ * @return @c XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR
+ * */
+XwWindowActionPermissions
+    xw_window_set_action_permissions (XwWindow *self, XwWindowActionPermissions permissions) {
+    RETURN_VALUE_IF (!self, XW_WINDOW_ACTION_PERMISSION_MASK_CLEAR, ERR_INVALID_ARGUMENTS);
+
+    struct {
+        xcb_atom_t                atom;
+        XwWindowActionPermissions mask;
+    } atoms[] = {
+        {          xw_state._NET_WM_ACTION_MOVE,           XW_WINDOW_ACTION_PERMISSION_MASK_MOVE},
+        {        xw_state._NET_WM_ACTION_RESIZE,         XW_WINDOW_ACTION_PERMISSION_MASK_RESIZE},
+        {      xw_state._NET_WM_ACTION_MINIMIZE,       XW_WINDOW_ACTION_PERMISSION_MASK_MINIMIZE},
+        {         xw_state._NET_WM_ACTION_SHADE,          XW_WINDOW_ACTION_PERMISSION_MASK_SHADE},
+        {         xw_state._NET_WM_ACTION_STICK,          XW_WINDOW_ACTION_PERMISSION_MASK_STICK},
+        { xw_state._NET_WM_ACTION_MAXIMIZE_HORZ,  XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_HORZ},
+        { xw_state._NET_WM_ACTION_MAXIMIZE_VERT,  XW_WINDOW_ACTION_PERMISSION_MASK_MAXIMIZE_VERT},
+        {    xw_state._NET_WM_ACTION_FULLSCREEN,     XW_WINDOW_ACTION_PERMISSION_MASK_FULLSCREEN},
+        {xw_state._NET_WM_ACTION_CHANGE_DESKTOP, XW_WINDOW_ACTION_PERMISSION_MASK_CHANGE_DESKTOP},
+        {         xw_state._NET_WM_ACTION_CLOSE,          XW_WINDOW_ACTION_PERMISSION_MASK_CLOSE},
+        {         xw_state._NET_WM_ACTION_ABOVE,          XW_WINDOW_ACTION_PERMISSION_MASK_ABOVE},
+        {         xw_state._NET_WM_ACTION_BELOW,          XW_WINDOW_ACTION_PERMISSION_MASK_BELOW},
+    };
+
+    /* reset _NET_WM_ALLOWED_ACTIONS atom array */
+    xcb_change_property (
+        xw_state.connection,              /* conn*/
+        XCB_PROP_MODE_REPLACE,            /* mode */
+        self->xcb_window_id,              /* window */
+        xw_state._NET_WM_ALLOWED_ACTIONS, /* property */
+        XCB_ATOM_ATOM,                    /* type */
+        32,                               /* format */
+        0,                                /* length */
+        Null                              /* data */
+    );
+
+    /* append permissions to permissions array */
+    for (Size i = 0; i < ARRAY_SIZE (atoms); i++) {
+        if (permissions & atoms[i].mask) {
+            xcb_change_property (
+                xw_state.connection,              /* conn*/
+                XCB_PROP_MODE_APPEND,             /* mode */
+                self->xcb_window_id,              /* window */
+                xw_state._NET_WM_ALLOWED_ACTIONS, /* property */
+                XCB_ATOM_ATOM,                    /* type */
+                32,                               /* format */
+                1,                                /* length */
+                &atoms[i].atom                    /* data */
+            );
+        }
+    }
+
+    xcb_flush (xw_state.connection);
+
+    return permissions;
 }
 
 /************************************** PRIVATE METHODS **************************************/

@@ -42,15 +42,18 @@ typedef struct XwWindow {
     xcb_screen_t *screen;
 
     /* platform independent data */
-    Size          xw_id; /**< @b This is cross window id. Different from platform window id. */
-    Uint32        border_width;
-    XwWindowSize  size;
-    XwWindowSize  min_size;
-    XwWindowSize  max_size;
-    XwWindowPos   pos;
-    CString       title;
-    CString       icon_path;
-    XwWindowState state;
+    Size xw_id; /**< @b This is cross window id. Different from platform window id. */
+
+    Uint32       border_width;
+    XwWindowSize size;
+    XwWindowSize min_size;
+    XwWindowSize max_size;
+    XwWindowPos  pos;
+
+    CString title;
+    CString icon_path;
+
+    XwWindowState             state;              /* bitmask of current window state. */
 
     Uint32 last_cursor_pos_x;
     Uint32 last_cursor_pos_y;

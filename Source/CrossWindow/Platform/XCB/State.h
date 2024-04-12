@@ -58,24 +58,38 @@ typedef struct XwState {
 
     /**< @b _NET_WM_STATE : https://specifications.freedesktop.org/wm-spec/latest/ar01s05.html#idm46025198457920 */
     xcb_atom_t _NET_WM_STATE;
-    xcb_atom_t _NET_WM_STATE_MODAL;          /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_STICKY;         /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_MAXIMIZED_VERT; /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_MAXIMIZED_HORZ; /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_SHADED;         /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_SKIP_TASKBAR;   /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_SKIP_PAGER;     /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_HIDDEN;         /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_FULLSCREEN;     /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_ABOVE;          /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_BELOW;          /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t
-        _NET_WM_STATE_DEMANDS_ATTENTION;     /**< @b One of the possible values of _NET_WM_STATE */
-    xcb_atom_t _NET_WM_STATE_FOCUSED;        /**< @b One of the possible values of _NET_WM_STATE */
+    xcb_atom_t _NET_WM_STATE_MODAL;
+    xcb_atom_t _NET_WM_STATE_STICKY;
+    xcb_atom_t _NET_WM_STATE_MAXIMIZED_VERT;
+    xcb_atom_t _NET_WM_STATE_MAXIMIZED_HORZ;
+    xcb_atom_t _NET_WM_STATE_SHADED;
+    xcb_atom_t _NET_WM_STATE_SKIP_TASKBAR;
+    xcb_atom_t _NET_WM_STATE_SKIP_PAGER;
+    xcb_atom_t _NET_WM_STATE_HIDDEN;
+    xcb_atom_t _NET_WM_STATE_FULLSCREEN;
+    xcb_atom_t _NET_WM_STATE_ABOVE;
+    xcb_atom_t _NET_WM_STATE_BELOW;
+    xcb_atom_t _NET_WM_STATE_DEMANDS_ATTENTION;
+    xcb_atom_t _NET_WM_STATE_FOCUSED;
 
-#define _NET_WM_STATE_REMOVE 0               /* remove/unset property */
-#define _NET_WM_STATE_ADD    1               /* add/set property */
-#define _NET_WM_STATE_TOGGLE 2               /* toggle property  */
+#define _NET_WM_STATE_REMOVE 0 /* remove/unset property */
+#define _NET_WM_STATE_ADD    1 /* add/set property */
+#define _NET_WM_STATE_TOGGLE 2 /* toggle property  */
+
+    /**< @b _NET_WM_ALLOWED_ACTIONS : https://specifications.freedesktop.org/wm-spec/1.4/ar01s05.html */
+    xcb_atom_t _NET_WM_ALLOWED_ACTIONS;
+    xcb_atom_t _NET_WM_ACTION_MOVE;
+    xcb_atom_t _NET_WM_ACTION_RESIZE;
+    xcb_atom_t _NET_WM_ACTION_MINIMIZE;
+    xcb_atom_t _NET_WM_ACTION_SHADE;
+    xcb_atom_t _NET_WM_ACTION_STICK;
+    xcb_atom_t _NET_WM_ACTION_MAXIMIZE_HORZ;
+    xcb_atom_t _NET_WM_ACTION_MAXIMIZE_VERT;
+    xcb_atom_t _NET_WM_ACTION_FULLSCREEN;
+    xcb_atom_t _NET_WM_ACTION_CHANGE_DESKTOP;
+    xcb_atom_t _NET_WM_ACTION_CLOSE;
+    xcb_atom_t _NET_WM_ACTION_ABOVE;
+    xcb_atom_t _NET_WM_ACTION_BELOW;
 
     /** 
      * @b A mapping from CrossWindow Id to the window itself.
