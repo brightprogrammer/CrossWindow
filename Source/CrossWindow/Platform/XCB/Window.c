@@ -121,8 +121,8 @@ XwWindow *xw_window_init (
     self->border_width  = 0;
     self->min_size      = (XwWindowSize) {1, 1};
     self->max_size      = (XwWindowSize) {screen->width_in_pixels, screen->height_in_pixels};
-    self->size.width    = CLAMP (width, 0, self->max_size.width);
-    self->size.height   = CLAMP (height, 0, self->max_size.height);
+    self->size.width    = width;
+    self->size.height   = height;
     self->pos.x         = xpos;
     self->pos.y         = ypos;
     self->title         = title ? strdup (title) : Null;
@@ -135,8 +135,7 @@ XwWindow *xw_window_init (
         XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_FOCUS_CHANGE |
         XCB_EVENT_MASK_VISIBILITY_CHANGE | XCB_EVENT_MASK_STRUCTURE_NOTIFY |
         XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_POINTER_MOTION |
-        XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
-        XCB_EVENT_MASK_RESIZE_REDIRECT
+        XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY 
     };
 
     /* create window corresponding to window id */
@@ -175,8 +174,10 @@ XwWindow *xw_window_init (
     /* register this window to global state. */
     self->xw_id = xw_create_new_window_id (self);
 
-    xw_window_set_max_size(self, self->max_size);
-    xw_window_set_min_size(self, self->min_size);
+    xw_window_set_max_size (self, self->max_size);
+    xw_window_set_min_size (self, self->min_size);
+    xw_window_set_size (self, self->size);
+    xw_window_set_pos (self, self->pos);
 
     xcb_map_window (conn, win_id);
     xcb_flush (conn);
