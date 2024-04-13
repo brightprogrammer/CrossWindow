@@ -119,7 +119,7 @@ XwWindow *xw_window_init (
 
     self->xcb_window_id = win_id;
     self->border_width  = 0;
-    self->min_size      = (XwWindowSize) {0, 0};
+    self->min_size      = (XwWindowSize) {1, 1};
     self->max_size      = (XwWindowSize) {screen->width_in_pixels, screen->height_in_pixels};
     self->size.width    = CLAMP (width, 0, self->max_size.width);
     self->size.height   = CLAMP (height, 0, self->max_size.height);
@@ -174,6 +174,9 @@ XwWindow *xw_window_init (
 
     /* register this window to global state. */
     self->xw_id = xw_create_new_window_id (self);
+
+    xw_window_set_max_size(self, self->max_size);
+    xw_window_set_min_size(self, self->min_size);
 
     xcb_map_window (conn, win_id);
     xcb_flush (conn);

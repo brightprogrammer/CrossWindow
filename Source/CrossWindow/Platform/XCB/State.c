@@ -111,11 +111,12 @@ static xcb_atom_t xw_get_xcb_atom (CString atom_name);
  * */
 CONSTRUCTOR Bool xw_init (void) {
     memset (&xw_state, 0, sizeof (xw_state));
+    int screenp = 0;
 
     /* open a new connection to xcb */
     xcb_connection_t *conn = xcb_connect (
         Null /* displayname : Use the one provided in environment variable */,
-        Null /* screenp     : Screen pointer */
+        &screenp /* screenp     : Screen pointer */
     );
     RETURN_VALUE_IF (!conn, EXIT_FAILURE, CONNECTION_FAILED);
 
@@ -125,6 +126,9 @@ CONSTRUCTOR Bool xw_init (void) {
 
     /* get screen iterator to help us get screen */
     xcb_screen_iterator_t screen_iter = xcb_setup_roots_iterator (setup);
+    while (screenp-- > 0) {
+        xcb_screen_next (&screen_iter);
+    }
 
     /* update xw_state */
     xw_state.screen_iterator = screen_iter;
