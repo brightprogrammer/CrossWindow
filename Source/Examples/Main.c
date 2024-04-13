@@ -6,6 +6,7 @@
 #include <CrossWindow/Window.h>
 
 /* libc */
+#include <stdint.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
@@ -70,10 +71,6 @@ int main() {
     const Uint32 height = 540;
     XwWindow    *win    = xw_window_create ("Ckeckl", width, height, 10, 20);
 
-    // set window to non-resizable
-    xw_window_set_min_size (win, (XwWindowSize) {width, height});
-    xw_window_set_max_size (win, (XwWindowSize) {width, height});
-
     Vulkan *vk = vk_create();
     GOTO_HANDLER_IF (!vk, VK_INIT_FAILED, "Failed to create Vulkan\n");
 
@@ -130,9 +127,8 @@ int main() {
                 DRAW_ERROR,
                 "Failed to recreate swapchain\n"
             );
-            PRINT_ERR ("Swapchain RECREATED!\n");
-            resized = False;
-            res     = VK_SUCCESS; /* to pass upcoming check */
+            continue;
+            res = VK_SUCCESS; /* to pass upcoming check */
         }
         GOTO_HANDLER_IF (
             res != VK_SUCCESS,
@@ -233,7 +229,6 @@ int main() {
                 DRAW_ERROR,
                 "Failed to recreate swapchain\n"
             );
-            PRINT_ERR ("Swapchain RECREATED!\n");
             res = VK_SUCCESS; /* so that next check does not fail */
         }
         GOTO_HANDLER_IF (
@@ -540,6 +535,14 @@ Surface *surface_recreate_swapchain (Surface *surface, XwWindow *win) {
         "Swapchain recreate called but, previous images/views/framebuffers are invalid\n"
     );
 
+    surface_wait_for_pending_operations (surface);
+
+    vkDestroySemaphore (surface->device, surface->present_semaphore, Null);
+    vkDestroySemaphore (surface->device, surface->render_semaphore, Null);
+    vkDestroyFence (surface->device, surface->render_fence, Null);
+
+    vkDestroyCommandPool (surface->device, surface->cmd_pool, Null);
+
     /* destroy image views and framebuffers because they need to be recreated */
     for (Size s = 0; s < surface->swapchain_image_count; s++) {
         vkDestroyImageView (surface->device, surface->swapchain_image_views[s], Null);
@@ -556,7 +559,8 @@ Surface *surface_recreate_swapchain (Surface *surface, XwWindow *win) {
     RETURN_VALUE_IF (
         !surface_create_swapchain (surface, win) || !surface_fetch_swapchain_images (surface) ||
             !surface_create_swapchain_image_views (surface) ||
-            !surface_create_framebuffers (surface),
+            !surface_create_framebuffers (surface) || !surface_create_sync_objects (surface) ||
+            !surface_create_command_objects (surface),
         Null,
         "Failed to recreate swapchain\n"
     );
@@ -784,20 +788,23 @@ static inline Surface *surface_create_swapchain (Surface *surface, XwWindow *win
         &capabilities
     );
 
-    XwWindowSize win_size     = xw_window_get_size (win);
-    VkExtent2D   image_extent = {
-          .width = CLAMP (
-            win_size.width,
-            capabilities.minImageExtent.width,
-            capabilities.maxImageExtent.width
-        ),
-          .height = CLAMP (
-            win_size.height,
-            capabilities.minImageExtent.height,
-            capabilities.maxImageExtent.height
-        )
-    };
-    PRINT_ERR ("CURRENT SURFACE SIZE = %u %u\n", image_extent.width, image_extent.height);
+    VkExtent2D image_extent;
+    if (capabilities.currentExtent.width == UINT32_MAX) {
+        XwWindowSize win_size = xw_window_get_size (win);
+        image_extent          = (VkExtent2D) {.width = win_size.width, .height = win_size.height};
+    } else {
+        image_extent = (VkExtent2D
+        ) {.width = CLAMP (
+               capabilities.currentExtent.width,
+               capabilities.minImageExtent.width,
+               capabilities.maxImageExtent.width
+           ),
+           .height = CLAMP (
+               capabilities.currentExtent.height,
+               capabilities.minImageExtent.height,
+               capabilities.maxImageExtent.height
+           )};
+    }
 
     /* get number of available present modes */
     Uint32   present_mode_count = 0;
