@@ -36,9 +36,11 @@
 #include <CrossWindow/Event.h>
 
 /* local headers */
-#include "CrossWindow/Window.h"
 #include "State.h"
 #include "Window.h"
+
+/* libc headers */
+#include <string.h>
 
 /* x11/xcb headers */
 #include <xcb/xcb_keysyms.h>
@@ -114,7 +116,7 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
 
             break;
         }
-
+        
         /* Generated when a window is unmapped onto screen. 
          * REF : https://tronche.com/gui/x/xlib/events/window-state-change/map.html
          * */
@@ -170,14 +172,11 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
 
             /* I'm assuming here that not all are possible at once! */
             if (notify->width != window->size.width || notify->height != window->size.height) {
-                e            = xw_event_resize (e, notify->width, notify->height, window);
-                window->size = (XwWindowSize) {notify->width, notify->height};
+                e = xw_event_resize (e, notify->width, notify->height, window);
             } else if ((Uint32)notify->x != window->pos.x || (Uint32)notify->y != window->pos.y) {
-                e           = xw_event_reposition (e, notify->x, notify->y, window);
-                window->pos = (XwWindowPos) {notify->x, notify->y};
+                e = xw_event_reposition (e, notify->x, notify->y, window);
             } else if (notify->border_width != window->border_width) {
                 e = xw_event_border_width_change (e, notify->border_width, window);
-                window->border_width = notify->border_width;
             } else if (notify->above_sibling != XCB_WINDOW_NONE) {
                 /* search for sibling window */
                 XwWindow *above_sibling = xw_get_window_by_xcb_id (notify->above_sibling);
@@ -336,7 +335,6 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
                                           new_state & ~XW_WINDOW_STATE_MASK_FOCUSED;
                     }
                 }
-                window->state = new_state;
 
                 /* set new state */
                 e = xw_event_state_change (e, new_state, window);
