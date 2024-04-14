@@ -6,6 +6,7 @@
 #include <CrossWindow/Window.h>
 
 /* libc */
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
@@ -53,6 +54,9 @@ typedef struct Surface {
     VkSemaphore render_semaphore;
     VkSemaphore present_semaphore;
     VkFence     render_fence;
+
+    VkPipeline       pipeline;
+    VkPipelineLayout pipeline_layout;
 } Surface;
 
 Surface *surface_create (Vulkan *vk, XwWindow *xw_win);
@@ -67,8 +71,8 @@ Surface *surface_wait_for_pending_operations (Surface *surface);
 /**************************************************************************************************/
 
 int main() {
-    const Uint32 width  = 960;
-    const Uint32 height = 540;
+    const Uint32 width  = 360;
+    const Uint32 height = 240;
     XwWindow    *win    = xw_window_create ("Ckeckl", width, height, 10, 20);
 
     Vulkan *vk = vk_create();
@@ -80,6 +84,7 @@ int main() {
     /* event handlign looop */
     Bool    is_running = True;
     XwEvent e;
+    Uint64  framenum = 0;
     while (is_running) {
         Bool resized = False;
         while (xw_event_poll (&e)) {
@@ -89,9 +94,6 @@ int main() {
                     break;
                 }
                 case XW_EVENT_TYPE_RESIZE : {
-                    XwWindowSize cur_size = xw_window_get_size (win);
-                    // xw_window_set_size (win, (XwWindowSize) {e.resize.width, e.resize.height});
-                    xw_window_set_size (win, cur_size);
                     resized = True;
                     break;
                 }
@@ -113,7 +115,8 @@ int main() {
 
         /* get next image index */
         Uint32 next_image_index = -1;
-        res                     = vkAcquireNextImageKHR (
+
+        res = vkAcquireNextImageKHR (
             surface->device,
             surface->swapchain,
             1e9,
@@ -166,7 +169,13 @@ int main() {
             res
         );
 
-        VkClearValue clear_value = {.color = {{0.8, 0, 0.8, 1}}};
+        VkClearValue clear_value = {
+            .color =
+                {{sin (framenum / 1000.f),
+                  cos (framenum / 1000.f),
+                  fabs (sin (framenum / 1000.f) - cos (framenum / 1000.f)),
+                  1}}
+        };
 
         VkRenderPassBeginInfo render_pass_begin_info = {
             .sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -179,6 +188,8 @@ int main() {
         };
 
         vkCmdBeginRenderPass (cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline (cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, surface->pipeline);
+        vkCmdDraw (cmd, 3, 1, 0, 0);
         vkCmdEndRenderPass (cmd);
 
         res = vkEndCommandBuffer (cmd);
@@ -237,6 +248,8 @@ int main() {
             "Failed to present rendered images to surface. RET = %d\n",
             res
         );
+
+        framenum++;
     }
 
     surface_destroy (surface, vk);
@@ -273,12 +286,15 @@ static inline Surface *surface_create_swapchain_image_views (Surface *surface);
 static inline Surface *surface_create_command_objects (Surface *surface);
 static inline Surface *surface_create_renderpass (Surface *surface);
 static inline Surface *surface_create_framebuffers (Surface *surface);
-static inline Surface *surface_create_sync_objects (Surface *);
+static inline Surface *surface_create_sync_objects (Surface *surface);
+static inline Surface *surface_create_pipeline_layout (Surface *surface);
+static inline Surface *surface_create_pipeline (Surface *surface);
 
 /* private helper methods */
 static inline const CString *get_instance_layer_names (Size *count);
 static inline const CString *get_instance_extension_names (Size *count);
 static inline Int32 find_queue_family_index (VkPhysicalDevice gpu, VkQueueFlags queue_flags);
+static inline VkShaderModule load_shader (VkDevice device, CString path);
 
 /**************************************************************************************************/
 /******************************** VULKAN PUBLIC METHOD DEFINITIONS ********************************/
@@ -413,7 +429,8 @@ Surface *surface_init (Surface *surface, Vulkan *vk, XwWindow *win) {
             !surface_fetch_swapchain_images (surface) ||
             !surface_create_swapchain_image_views (surface) ||
             !surface_create_command_objects (surface) || !surface_create_renderpass (surface) ||
-            !surface_create_framebuffers (surface) || !surface_create_sync_objects (surface),
+            !surface_create_framebuffers (surface) || !surface_create_sync_objects (surface) ||
+            !surface_create_pipeline_layout (surface) || !surface_create_pipeline (surface),
         INIT_FAILED,
         "Failed to initialize Surface object\n"
     );
@@ -440,6 +457,14 @@ Surface *surface_deinit (Surface *surface, Vulkan *vk) {
     vkDeviceWaitIdle (surface->device);
 
     if (surface->device) {
+        if (surface->pipeline_layout) {
+            vkDestroyPipelineLayout (surface->device, surface->pipeline_layout, Null);
+        }
+
+        if (surface->pipeline) {
+            vkDestroyPipeline (surface->device, surface->pipeline, Null);
+        }
+
         if (surface->render_semaphore) {
             vkDestroySemaphore (surface->device, surface->render_semaphore, Null);
         }
@@ -1220,6 +1245,197 @@ static inline Surface *surface_create_sync_objects (Surface *surface) {
     return surface;
 }
 
+static inline Surface *surface_create_pipeline_layout (Surface *surface) {
+    RETURN_VALUE_IF (!surface, Null, ERR_INVALID_ARGUMENTS);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {0};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    VkResult res = vkCreatePipelineLayout (
+        surface->device,
+        &pipeline_layout_create_info,
+        Null,
+        &surface->pipeline_layout
+    );
+    RETURN_VALUE_IF (res != VK_SUCCESS, Null, "Failed to create pipeline layout. RET = %d\n", res);
+
+    return surface;
+}
+
+/**
+ * @b Create graphics pipeline and store it in given Surface.
+ *
+ * @param surface
+ *
+ * @return @c surface on success.
+ * @return @c Null otherwise.
+ * */
+static inline Surface *surface_create_pipeline (Surface *surface) {
+    RETURN_VALUE_IF (!surface, Null, ERR_INVALID_ARGUMENTS);
+
+    /* create shader modules */
+    VkShaderModule vert_shader = VK_NULL_HANDLE, frag_shader = VK_NULL_HANDLE;
+    vert_shader = load_shader (surface->device, "bin/Shaders/triangle.vert.spv");
+    frag_shader = load_shader (surface->device, "bin/Shaders/triangle.frag.spv");
+    GOTO_HANDLER_IF (
+        !vert_shader || !frag_shader,
+        SHADER_LOAD_FAILED,
+        "Failed to load vertex/fragment shaders\n"
+    );
+
+    /* add shader modules and shader stages to be used in this pipeline here */
+    struct {
+        VkShaderModule     module;
+        VkShaderStageFlags stage;
+    } stage_infos[] = {
+        {.module = vert_shader,   .stage = VK_SHADER_STAGE_VERTEX_BIT},
+        {.module = frag_shader, .stage = VK_SHADER_STAGE_FRAGMENT_BIT}
+    };
+
+    /* create shader stages array */
+    VkPipelineShaderStageCreateInfo shader_stages[ARRAY_SIZE (stage_infos)];
+    for (Size s = 0; s < ARRAY_SIZE (shader_stages); s++) {
+        shader_stages[s] = (VkPipelineShaderStageCreateInfo
+        ) {.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+           .pNext               = Null,
+           .flags               = 0,
+           .stage               = stage_infos[s].stage,
+           .module              = stage_infos[s].module,
+           .pName               = "main",
+           .pSpecializationInfo = Null};
+    }
+
+    /* describe vertex input state */
+    VkPipelineVertexInputStateCreateInfo vertex_input_state = {0};
+    vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    /* how to assemble input vertex data */
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {0};
+    input_assembly_state.sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    /* describe tesselation state */
+    VkPipelineTessellationStateCreateInfo tesselation_state = {0};
+    tesselation_state.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+
+    /* describe viewport and scissor */
+    VkPipelineViewportStateCreateInfo viewport_state = {
+        .sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .pNext         = Null,
+        .flags         = 0,
+        .viewportCount = 1,
+        .pViewports    = (VkViewport[]
+        ) {{.x        = 0,
+               .y        = 0,
+               .width    = surface->swapchain_image_extent.width,
+               .height   = surface->swapchain_image_extent.height,
+               .minDepth = 0.f,
+               .maxDepth = 1.f}},
+        .scissorCount  = 1,
+        .pScissors =
+            (VkRect2D[]) {{.offset = {.x = 0, .y = 0}, .extent = surface->swapchain_image_extent}}
+    };
+
+    /* describe rasterization state */
+    VkPipelineRasterizationStateCreateInfo rasterization_state = {
+        .sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .pNext                   = Null,
+        .flags                   = 0,
+        .depthClampEnable        = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode             = VK_POLYGON_MODE_FILL,
+        .cullMode                = VK_CULL_MODE_NONE,
+        .frontFace               = VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasEnable         = VK_FALSE,
+        .depthBiasConstantFactor = 1.f,
+        .depthBiasClamp          = 0.f,
+        .depthBiasSlopeFactor    = 1.f,
+        .lineWidth               = 1.f
+    };
+
+    /* describe how multisampling of rendered images will be performed */
+    VkPipelineMultisampleStateCreateInfo multisample_state = {
+        .sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .pNext                 = Null,
+        .flags                 = 0,
+        .rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable   = VK_FALSE,
+        .minSampleShading      = 1.f,
+        .pSampleMask           = Null,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable      = VK_FALSE
+    };
+
+    /* describe z-fighting behavior : disabled for now */
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {0};
+    depth_stencil_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+
+    /* we have a single color attachment in renderpass so we need this */
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    /* describe color-blending */
+    VkPipelineColorBlendStateCreateInfo color_blend_state = {0};
+    color_blend_state.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend_state.attachmentCount = 1;
+    color_blend_state.pAttachments    = &color_blend_attachment;
+
+    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {
+        .sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext               = Null,
+        .flags               = 0,
+        .stageCount          = ARRAY_SIZE (shader_stages),
+        .pStages             = shader_stages,
+        .pVertexInputState   = &vertex_input_state,
+        .pInputAssemblyState = &input_assembly_state,
+        .pTessellationState  = &tesselation_state,
+        .pViewportState      = &viewport_state,
+        .pRasterizationState = &rasterization_state,
+        .pMultisampleState   = &multisample_state,
+        .pDepthStencilState  = &depth_stencil_state,
+        .pColorBlendState    = &color_blend_state,
+        .pDynamicState       = Null,
+        .layout              = surface->pipeline_layout,
+        .renderPass          = surface->render_pass,
+        .subpass             = 0,
+        .basePipelineHandle  = VK_NULL_HANDLE,
+        .basePipelineIndex   = 0
+    };
+
+    /* create graphics pipelines */
+    VkResult res = vkCreateGraphicsPipelines (
+        surface->device,
+        VK_NULL_HANDLE,
+        1,
+        &graphics_pipeline_create_info,
+        Null,
+        &surface->pipeline
+    );
+    GOTO_HANDLER_IF (
+        res != VK_SUCCESS,
+        PIPELINE_CREATE_FAILED,
+        "Failed to create graphics pipelines. RET = %d\n",
+        res
+    );
+
+    /* destroy shader modules because we don't need them anymore */
+    vkDestroyShaderModule (surface->device, vert_shader, Null);
+    vkDestroyShaderModule (surface->device, frag_shader, Null);
+
+    return surface;
+
+PIPELINE_CREATE_FAILED:
+SHADER_LOAD_FAILED:
+    if (vert_shader) {
+        vkDestroyShaderModule (surface->device, vert_shader, Null);
+    }
+    if (frag_shader) {
+        vkDestroyShaderModule (surface->device, frag_shader, Null);
+    }
+    return Null;
+}
+
 /**************************************************************************************************/
 /******************************* PRIVATE HELPER METHOD DEFINITIONS ********************************/
 /**************************************************************************************************/
@@ -1322,4 +1538,56 @@ static inline Int32 find_queue_family_index (VkPhysicalDevice gpu, VkQueueFlags 
     );
 
     return family_index;
+}
+
+/**
+ * @b Create a shader module by loading it from file.
+ *
+ * @param device To use to create shader module.
+ * @param path Path of SPIR-V shader code.
+ *
+ * @return VkShaderModule on success.
+ * @return VK_NULL_HANDLE otherwise.
+ * */
+static inline VkShaderModule load_shader (VkDevice device, CString path) {
+    RETURN_VALUE_IF (!device || !path, VK_NULL_HANDLE, ERR_INVALID_ARGUMENTS);
+
+    FILE *file = fopen (path, "r");
+    RETURN_VALUE_IF (!file, VK_NULL_HANDLE, ERR_INVALID_ARGUMENTS);
+
+    fseek (file, 0, SEEK_END);
+    Size file_size = ftell (file);
+    GOTO_HANDLER_IF (!file_size, FILE_SIZE_ZERO, "Shader file (\"%s\") size must not be 0\n", path);
+    fseek (file, 0, SEEK_SET);
+
+    Uint8 *fdata = ALLOCATE (Uint8, file_size);
+    fread (fdata, 1, file_size, file);
+    fclose (file);
+
+    VkShaderModuleCreateInfo shader_module_create_info = {
+        .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext    = Null,
+        .flags    = 0,
+        .codeSize = file_size,
+        .pCode    = (Uint32 *)fdata
+    };
+
+    VkShaderModule shader = VK_NULL_HANDLE;
+    VkResult       res = vkCreateShaderModule (device, &shader_module_create_info, Null, &shader);
+    GOTO_HANDLER_IF (
+        res != VK_SUCCESS,
+        SHADER_CREATE_FAILED,
+        "Failed to create shader module. RET = %d\n",
+        res
+    );
+
+    FREE (fdata);
+
+    return shader;
+
+SHADER_CREATE_FAILED:
+    FREE (fdata);
+FILE_SIZE_ZERO:
+    fclose (file);
+    return VK_NULL_HANDLE;
 }
