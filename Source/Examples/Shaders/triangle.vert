@@ -1,11 +1,11 @@
-//we will be using glsl version 4.5 syntax
 #version 450
 
-void main() {
-    //const array of positions for the triangle
-    const vec3 positions[3] =
-        vec3[3](vec3 (0.5f, 0.5f, 0.0f), vec3 (-0.5f, 0.5f, 0.0f), vec3 (0.f, -0.5f, 0.0f));
+layout (location = 0) in vec2 in_pos;
+layout (location = 1) in vec4 in_color;
 
-    //output the position of each vertex
-    gl_Position = vec4 (positions[gl_VertexIndex], 1.0f);
+layout (location = 0) out vec4 out_color;
+
+void main() {
+    gl_Position = vec4 (in_pos.xy, 0.f, 1.0f);
+    out_color = in_color;
 }

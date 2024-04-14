@@ -67,6 +67,52 @@ Surface *surface_recreate_swapchain (Surface *surf, XwWindow *win);
 Surface *surface_wait_for_pending_operations (Surface *surface);
 
 /**************************************************************************************************/
+/********************************************** Math **********************************************/
+/**************************************************************************************************/
+
+typedef struct Position2D {
+    Float32 x;
+    Float32 y;
+} Position2D;
+
+typedef struct Color {
+    Float32 r;
+    Float32 g;
+    Float32 b;
+    Float32 a;
+} Color;
+
+typedef struct Vertex2D {
+    Position2D position;
+    Color      color;
+} Vertex2D;
+
+static const Vertex2D triangle_vertices[] = {
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f, 1.f}},
+    {{-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.f}},
+    { {0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.f}}
+};
+
+/**************************************************************************************************/
+/***************************************** BUFFER OBJECT ******************************************/
+/**************************************************************************************************/
+
+typedef struct BufferObject {
+    VkBuffer       buffer;
+    VkDeviceMemory memory;
+} BufferObject;
+
+BufferObject buffer_object_create (
+    VkPhysicalDevice   gpu,
+    VkDevice           device,
+    VkBufferUsageFlags usage,
+    Size               size,
+    Uint32             queue_family_inddex
+);
+void         buffer_object_destroy (BufferObject bo, VkDevice device);
+BufferObject buffer_object_upload_data (BufferObject bo, VkDevice device, void *data, Size size);
+
+/**************************************************************************************************/
 /************************************************  ************************************************/
 /**************************************************************************************************/
 
@@ -80,6 +126,21 @@ int main() {
 
     Surface *surface = surface_create (vk, win);
     GOTO_HANDLER_IF (!surface, SURFACE_FAILED, "Failed to create Surface\n");
+
+    BufferObject vbo = buffer_object_create (
+        surface->selected_gpu,
+        surface->device,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        sizeof (triangle_vertices),
+        surface->graphics_family_index
+    );
+
+    buffer_object_upload_data (
+        vbo,
+        surface->device,
+        (void *)triangle_vertices,
+        sizeof (triangle_vertices)
+    );
 
     /* event handlign looop */
     Bool    is_running = True;
@@ -171,9 +232,9 @@ int main() {
 
         VkClearValue clear_value = {
             .color =
-                {{sin (framenum / 1000.f),
-                  cos (framenum / 1000.f),
-                  fabs (sin (framenum / 1000.f) - cos (framenum / 1000.f)),
+                {{sin (framenum / 1000.f) * 0.3f,
+                  cos (framenum / 1000.f) * 0.3f,
+                  fabs (sin (framenum / 1000.f) - cos (framenum / 1000.f)) * 0.3f,
                   1}}
         };
 
@@ -189,6 +250,8 @@ int main() {
 
         vkCmdBeginRenderPass (cmd, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline (cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, surface->pipeline);
+        Size offset = 0;
+        vkCmdBindVertexBuffers (cmd, 0, 1, &vbo.buffer, &offset);
         vkCmdDraw (cmd, 3, 1, 0, 0);
         vkCmdEndRenderPass (cmd);
 
@@ -252,6 +315,7 @@ int main() {
         framenum++;
     }
 
+    buffer_object_destroy (vbo, surface->device);
     surface_destroy (surface, vk);
     vk_destroy (vk);
     xw_window_destroy (win);
@@ -295,6 +359,7 @@ static inline const CString *get_instance_layer_names (Size *count);
 static inline const CString *get_instance_extension_names (Size *count);
 static inline Int32 find_queue_family_index (VkPhysicalDevice gpu, VkQueueFlags queue_flags);
 static inline VkShaderModule load_shader (VkDevice device, CString path);
+
 
 /**************************************************************************************************/
 /******************************** VULKAN PUBLIC METHOD DEFINITIONS ********************************/
@@ -610,6 +675,153 @@ Surface *surface_wait_for_pending_operations (Surface *surface) {
     vkDeviceWaitIdle (surface->device);
 
     return surface;
+}
+
+/**************************************************************************************************/
+/********************************** BUFFER OBJECT PUBLIC METHODS **********************************/
+/**************************************************************************************************/
+
+/**
+ * @b Create a buffer object.
+ *
+ * @param gpu To query memory type and properties supported by physical device.
+ * @param device Device to allocate memory on.
+ * @param usage How will this buffer object be used.
+ * @param size Number of bytes to allocate.
+ * @param queue_family_index Index of queue family on which this buffer will be EXCLUSIVELY used.
+ *
+ * @return @c BufferObject on success.
+ * @return @c {0, 0} otherwise.
+ * */
+BufferObject buffer_object_create (
+    VkPhysicalDevice   gpu,
+    VkDevice           device,
+    VkBufferUsageFlags usage,
+    Size               size,
+    Uint32             queue_family_index
+) {
+    RETURN_VALUE_IF (!gpu || !device || !size, ((BufferObject) {0, 0}), ERR_INVALID_ARGUMENTS);
+
+    /* create vertex buffer */
+    VkBuffer vbuffer = VK_NULL_HANDLE;
+    {
+        VkBufferCreateInfo buffer_create_info = {
+            .sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext                 = Null,
+            .flags                 = 0,
+            .size                  = size,
+            .usage                 = usage,
+            .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices   = (Uint32[]) {queue_family_index}
+        };
+
+        VkResult res = vkCreateBuffer (device, &buffer_create_info, Null, &vbuffer);
+        RETURN_VALUE_IF (
+            res != VK_SUCCESS,
+            ((BufferObject) {0, 0}),
+            "Failed to create buffer object"
+        );
+    }
+
+    /* find required memory type */
+    Size                  required_size     = 0;
+    Uint32                memory_type_index = 0;
+    VkMemoryPropertyFlags memory_property_flags =
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    {
+        VkMemoryRequirements memory_requirements;
+        vkGetBufferMemoryRequirements (device, vbuffer, &memory_requirements);
+
+        VkPhysicalDeviceMemoryProperties memory_properties;
+        vkGetPhysicalDeviceMemoryProperties (gpu, &memory_properties);
+
+        for (Uint32 i = 0; i < memory_properties.memoryTypeCount; i++) {
+            /* if memory type bit is flagged, and property flags match then set that as memory type */
+            if ((memory_requirements.memoryTypeBits & (1 << i)) &&
+                ((memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) ==
+                 memory_property_flags)) {
+                memory_type_index = i;
+            }
+        }
+
+        GOTO_HANDLER_IF (
+            !memory_type_index,
+            MEMORY_TYPE_NOT_FOUND,
+            "Required memory type not found!\n"
+        );
+
+        required_size = memory_requirements.size;
+    }
+
+    /* allocate memory for device buffer */
+    VkDeviceMemory vmemory = VK_NULL_HANDLE;
+    {
+        VkMemoryAllocateInfo allocate_info = {
+            .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .pNext           = Null,
+            .allocationSize  = required_size,
+            .memoryTypeIndex = memory_type_index
+        };
+
+        VkResult res = vkAllocateMemory (device, &allocate_info, Null, &vmemory);
+        GOTO_HANDLER_IF (
+            res != VK_SUCCESS,
+            MEMORY_ALLOC_FAILED,
+            "Failed to allocate memory for new buffer\b"
+        );
+    }
+
+    Size offset = 0;
+    vkBindBufferMemory (device, vbuffer, vmemory, offset);
+
+    return (BufferObject) {vbuffer, vmemory};
+
+MEMORY_TYPE_NOT_FOUND:
+MEMORY_ALLOC_FAILED:
+    vkDestroyBuffer (device, vbuffer, Null);
+    return (BufferObject) {0, 0};
+}
+
+/**
+ * @b Destroy buffer object and free memory allocated on device.
+ *
+ * @param device 
+ * @param bo 
+ * */
+void buffer_object_destroy (BufferObject bo, VkDevice device) {
+    RETURN_IF (!device || !bo.buffer || !bo.memory, ERR_INVALID_ARGUMENTS);
+
+    vkDeviceWaitIdle (device);
+
+    vkFreeMemory (device, bo.memory, Null);
+    vkDestroyBuffer (device, bo.buffer, Null);
+}
+
+/**
+ * @b Upload buffer data to GPU by copying it from given main memory to device memory.
+ *
+ * @param bo 
+ * @param device 
+ * @param data Pointer to data to be copied.
+ * @param size Size of data to be copied in number of bytes.
+ *
+ * @return @c bo on success.
+ * @return @c {0, 0} otherwise
+ * */
+BufferObject buffer_object_upload_data (BufferObject bo, VkDevice device, void *data, Size size) {
+    RETURN_VALUE_IF (
+        !bo.memory || !bo.buffer || !device || !data || !size,
+        ((BufferObject) {0, 0}),
+        ERR_INVALID_ARGUMENTS
+    );
+
+    void *mapped_data = Null;
+    vkMapMemory (device, bo.memory, 0, size, 0, &mapped_data);
+    memcpy (mapped_data, data, size);
+    vkUnmapMemory (device, bo.memory);
+
+    return bo;
 }
 
 /**************************************************************************************************/
@@ -1305,9 +1517,31 @@ static inline Surface *surface_create_pipeline (Surface *surface) {
            .pSpecializationInfo = Null};
     }
 
+    /* describe how vertex data is sent to GPU */
+    VkVertexInputBindingDescription vertex_binding_desc =
+        {.binding = 0, .stride = sizeof (Vertex2D), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
+
+    VkVertexInputAttributeDescription vertex_attribute_desc[] = {
+        {.location = 0,
+         .binding  = 0,
+         .format   = VK_FORMAT_R32G32_SFLOAT,
+         .offset   = offsetof (Vertex2D, position)},
+        {.location = 1,
+         .binding  = 0,
+         .format   = VK_FORMAT_R32G32B32A32_SFLOAT,
+         .offset   = offsetof (Vertex2D,    color)},
+    };
+
     /* describe vertex input state */
-    VkPipelineVertexInputStateCreateInfo vertex_input_state = {0};
-    vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    VkPipelineVertexInputStateCreateInfo vertex_input_state = {
+        .sType                         = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .pNext                         = Null,
+        .flags                         = 0,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions    = &vertex_binding_desc,
+        .vertexAttributeDescriptionCount = ARRAY_SIZE (vertex_attribute_desc),
+        .pVertexAttributeDescriptions    = vertex_attribute_desc
+    };
 
     /* how to assemble input vertex data */
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {0};
