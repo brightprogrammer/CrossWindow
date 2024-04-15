@@ -116,7 +116,7 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
 
             break;
         }
-        
+
         /* Generated when a window is unmapped onto screen. 
          * REF : https://tronche.com/gui/x/xlib/events/window-state-change/map.html
          * */
@@ -172,10 +172,13 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
 
             /* I'm assuming here that not all are possible at once! */
             if (notify->width != window->size.width || notify->height != window->size.height) {
-                e = xw_event_resize (e, notify->width, notify->height, window);
+                window->size = (XwWindowSize) {notify->width, notify->height};
+                e            = xw_event_resize (e, notify->width, notify->height, window);
             } else if ((Uint32)notify->x != window->pos.x || (Uint32)notify->y != window->pos.y) {
-                e = xw_event_reposition (e, notify->x, notify->y, window);
+                window->pos = (XwWindowPos) {notify->x, notify->y};
+                e           = xw_event_reposition (e, notify->x, notify->y, window);
             } else if (notify->border_width != window->border_width) {
+                window->border_width = notify->border_width;
                 e = xw_event_border_width_change (e, notify->border_width, window);
             } else if (notify->above_sibling != XCB_WINDOW_NONE) {
                 /* search for sibling window */
@@ -337,7 +340,8 @@ static XwEvent *xw_fill_event (XwEvent *e, const xcb_generic_event_t *xcb_event)
                 }
 
                 /* set new state */
-                e = xw_event_state_change (e, new_state, window);
+                window->state = new_state;
+                e             = xw_event_state_change (e, new_state, window);
             }
 
             break;

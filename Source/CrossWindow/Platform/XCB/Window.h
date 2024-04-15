@@ -53,7 +53,7 @@ typedef struct XwWindow {
     CString title;
     CString icon_path;
 
-    XwWindowState             state;              /* bitmask of current window state. */
+    XwWindowState state; /* bitmask of current window state. */
 
     Uint32 last_cursor_pos_x;
     Uint32 last_cursor_pos_y;
