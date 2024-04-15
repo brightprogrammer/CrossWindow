@@ -155,6 +155,7 @@ XwWindowPos  xw_window_set_pos (XwWindow *self, XwWindowPos pos);
 /* TODO : Does not work for XCB */
 XwWindowState xw_window_set_state (XwWindow *self, XwWindowState state);
 XwWindowActionPermissions
-    xw_window_set_action_permissions (XwWindow *self, XwWindowActionPermissions permissions);
+          xw_window_set_action_permissions (XwWindow *self, XwWindowActionPermissions permissions);
+XwWindow *xw_window_set_bordered (XwWindow *self, Bool border);
 
 #endif // CROSSWINDOW_WINDOW_H

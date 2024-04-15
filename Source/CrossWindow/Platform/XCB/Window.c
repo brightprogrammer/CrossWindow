@@ -31,10 +31,10 @@
  * */
 
 #include <Common.h>
+#include <CrossWindow/Window.h>
 #include <Types.h>
 
 /* local headers */
-#include "CrossWindow/Window.h"
 #include "State.h"
 #include "Window.h"
 
@@ -730,6 +730,49 @@ XwWindowActionPermissions
     xcb_flush (xw_state.connection);
 
     return permissions;
+}
+
+/**
+ * @c Remove or set border to window.
+ *
+ * @param self 
+ * @param border True if window must have a decoration, False otherwise.
+ *
+ * @return @c self on success.
+ * @return @c Null otherwise.
+ * */
+XwWindow *xw_window_set_bordered (XwWindow *self, Bool border) {
+    RETURN_VALUE_IF (!self, Null, ERR_INVALID_ARGUMENTS);
+    RETURN_VALUE_IF (
+        !xw_state._MOTIF_WM_HINTS,
+        Null,
+        "Cannot change window decoration. _MOTIF_WM_HINTS atom not available. This means your "
+        "window manager does not allow me to remove my window decoration\n"
+    );
+
+    /* following code is based on :
+     * https://github.com/libsdl-org/SDL/blob/d0819bcc5cfe852ad60deab4e1ff7d5598f0b983/src/video/x11/SDL_x11window.c#L420 */
+
+    struct {
+        unsigned long flags;
+        unsigned long functions;
+        unsigned long decorations;
+        long          input_mode;
+        unsigned long status;
+    } MWMHints = {(1L << 1), 0, border & 1, 0, 0};
+
+    xcb_change_property (
+        xw_state.connection,
+        XCB_PROP_MODE_REPLACE,
+        self->xcb_window_id,
+        xw_state._MOTIF_WM_HINTS,
+        xw_state._MOTIF_WM_HINTS,
+        32,
+        sizeof (MWMHints) / sizeof (long),
+        &MWMHints
+    );
+
+    return self;
 }
 
 /************************************** PRIVATE METHODS **************************************/

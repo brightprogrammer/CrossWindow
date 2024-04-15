@@ -91,6 +91,21 @@ typedef struct XwState {
     xcb_atom_t _NET_WM_ACTION_ABOVE;
     xcb_atom_t _NET_WM_ACTION_BELOW;
 
+    /* to remove window borders */
+    xcb_atom_t _MOTIF_WM_HINTS;
+
+    /* atoms to manage window type 
+     * https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45821695774192 */
+    xcb_atom_t _NET_WM_WINDOW_TYPE;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_DESKTOP;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_DOCK;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_TOOLBAR;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_MENU;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_UTILITY;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_SPLASH;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_DIALOG;
+    xcb_atom_t _NET_WM_WINDOW_TYPE_NORMAL;
+
     /** 
      * @b A mapping from CrossWindow Id to the window itself.
      * This is used by event poll and wait methods to get the window for which

@@ -69,9 +69,10 @@ XwState xw_state = {0};
 #define REPLY_FAILED      "Failed to get reply from X11\n"
 
 /* atom names */
-#define WM_PROTOCOLS_ATOM_NAME                    "WM_PROTOCOLS"
-#define WM_DELETE_WINDOW_ATOM_NAME                "WM_DELETE_WINDOW"
-#define WM_STATE_ATOM_NAME                        "WM_STATE"
+#define WM_PROTOCOLS_ATOM_NAME     "WM_PROTOCOLS"
+#define WM_DELETE_WINDOW_ATOM_NAME "WM_DELETE_WINDOW"
+#define WM_STATE_ATOM_NAME         "WM_STATE"
+
 #define _NET_WM_STATE_ATOM_NAME                   "_NET_WM_STATE"
 #define _NET_WM_STATE_MODAL_ATOM_NAME             "_NET_WM_STATE_MODAL"
 #define _NET_WM_STATE_STICKY_ATOM_NAME            "_NET_WM_STATE_STICKY"
@@ -100,6 +101,18 @@ XwState xw_state = {0};
 #define _NET_WM_ACTION_CLOSE_ATOM_NAME          "_NET_WM_ACTION_CLOSE"
 #define _NET_WM_ACTION_ABOVE_ATOM_NAME          "_NET_WM_ACTION_ABOVE"
 #define _NET_WM_ACTION_BELOW_ATOM_NAME          "_NET_WM_ACTION_BELOW"
+
+#define _MOTIF_WM_HINTS_ATOM_NAME "_MOTIF_WM_HINTS"
+
+#define _NET_WM_WINDOW_TYPE_ATOM_NAME         "_NET_WM_WINDOW_TYPE"
+#define _NET_WM_WINDOW_TYPE_DESKTOP_ATOM_NAME "_NET_WM_WINDOW_TYPE_DESKTOP"
+#define _NET_WM_WINDOW_TYPE_DOCK_ATOM_NAME    "_NET_WM_WINDOW_TYPE_DOCK"
+#define _NET_WM_WINDOW_TYPE_TOOLBAR_ATOM_NAME "_NET_WM_WINDOW_TYPE_TOOLBAR"
+#define _NET_WM_WINDOW_TYPE_MENU_ATOM_NAME    "_NET_WM_WINDOW_TYPE_MENU"
+#define _NET_WM_WINDOW_TYPE_UTILITY_ATOM_NAME "_NET_WM_WINDOW_TYPE_UTILITY"
+#define _NET_WM_WINDOW_TYPE_SPLASH_ATOM_NAME  "_NET_WM_WINDOW_TYPE_SPLASH"
+#define _NET_WM_WINDOW_TYPE_DIALOG_ATOM_NAME  "_NET_WM_WINDOW_TYPE_DIALOG"
+#define _NET_WM_WINDOW_TYPE_NORMAL_ATOM_NAME  "_NET_WM_WINDOW_TYPE_NORMAL"
 
 static xcb_atom_t xw_get_xcb_atom (CString atom_name);
 
@@ -172,6 +185,19 @@ CONSTRUCTOR Bool xw_init (void) {
     xw_state._NET_WM_ACTION_CLOSE = xw_get_xcb_atom (_NET_WM_ACTION_CLOSE_ATOM_NAME);
     xw_state._NET_WM_ACTION_ABOVE = xw_get_xcb_atom (_NET_WM_ACTION_ABOVE_ATOM_NAME);
     xw_state._NET_WM_ACTION_BELOW = xw_get_xcb_atom (_NET_WM_ACTION_BELOW_ATOM_NAME);
+
+    xw_state._MOTIF_WM_HINTS = xw_get_xcb_atom (_MOTIF_WM_HINTS_ATOM_NAME);
+
+    /* get atoms for setting windows state */
+    xw_state._NET_WM_WINDOW_TYPE         = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_DESKTOP = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_DESKTOP_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_DOCK    = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_DOCK_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_TOOLBAR = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_TOOLBAR_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_MENU    = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_MENU_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_UTILITY = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_UTILITY_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_SPLASH  = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_SPLASH_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_DIALOG  = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_DIALOG_ATOM_NAME);
+    xw_state._NET_WM_WINDOW_TYPE_NORMAL  = xw_get_xcb_atom (_NET_WM_WINDOW_TYPE_NORMAL_ATOM_NAME);
 
     return True;
 
