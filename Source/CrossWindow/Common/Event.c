@@ -5,6 +5,7 @@
  * @copyright Copyright (c) 2024 Siddharth Mishra
  * @copyright Copyright (c) 2024 Anvie Labs
  *
+ *
  * Copyright 2024 Siddharth Mishra, Anvie Labs
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted 
@@ -36,8 +37,8 @@
 /* headers from libc */
 #include <string.h>
 
-static XwEvent *xw_event_init (XwEvent *e, XwEventType type, XwWindow *win);
-extern CString  xwkey_to_cstr_map[XWK_MAX];
+static XwEvent       *xw_event_init (XwEvent *e, XwEventType type, XwWindow *win);
+static inline CString xw_key_to_cstr (XwKey key);
 
 /**
  * @b Convert given @c XwKey to corresponding CString.
@@ -61,7 +62,7 @@ CString xw_key_cstr (XwKey key, Bool caps_case) {
         key = XWK_a + (key - XWK_A);
     }
 
-    return xwkey_to_cstr_map[key];
+    return xw_key_to_cstr (key);
 }
 
 /**
@@ -708,7 +709,7 @@ static XwEvent *xw_event_init (XwEvent *e, XwEventType type, XwWindow *win) {
     return e;
 }
 
-CString xwkey_to_cstr_map[XWK_MAX] = {
+static CString xwkey_to_cstr_map[XWK_MAX] = {
     [XWK_UNKNOWN] = "UNKNOWN",
 
     /* digits */
@@ -876,3 +877,9 @@ CString xwkey_to_cstr_map[XWK_MAX] = {
     [XWK_NUM0]         = "NUM0",
     [XWK_NUMPAD_ENTER] = "NUMPAD_ENTER"
 };
+
+static inline CString xw_key_to_cstr (XwKey key) {
+    RETURN_VALUE_IF (key >= XWK_MAX, "INVALID", ERR_INVALID_ARGUMENTS);
+
+    return xwkey_to_cstr_map[key];
+}

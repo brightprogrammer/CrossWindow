@@ -1,0 +1,6 @@
+Name: CrossWindow
+Description: A Cross-Platform Window Library
+Version: @CrossWindow_VERSION@
+URL: https://github.com/brightprogrammer/CrossWindow/
+Libs: -L@CrossWindow_LIB_DIR@ @CrossWindow_LIBRARY_NAMES@
+Cflags: -I@CrossWindow_INCLUDE_DIR@
