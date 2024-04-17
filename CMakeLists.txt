@@ -21,7 +21,7 @@ set(CrossWindow_INCLUDE_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
 set(CrossWindow_LIB_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
 
 # install header files in platform specific include directories
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Include/" DESTINATION "${CrossWindow_INCLUDE_DIR}")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Include/" DESTINATION "include")
 
 # include the Include directory project-wide
 include_directories(Include)
@@ -55,5 +55,8 @@ configure_file(
 )
 install(
   FILES "${CMAKE_CURRENT_BINARY_DIR}/crosswindow.pc"
-  DESTINATION "${CrossWindow_LIB_DIR}/pkgconfig"
+  DESTINATION "lib/pkgconfig"
 )
+
+set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/packages")
+include(CPack)

@@ -7,5 +7,5 @@ target_include_directories(crosswindow_xcb PUBLIC ${XCB_INCLIDE_DIRS} ${Vulkan_I
 target_link_libraries(crosswindow_xcb crosswindow_common ${XCB_LIBRARIES} ${Vulkan_LIBRARIES})
 
 # install librarry
-install(TARGETS crosswindow_xcb LIBRARY DESTINATION ${INSTALL_LIB_DIR})
+install(TARGETS crosswindow_xcb LIBRARY DESTINATION lib)
 crosswindow_add_library_name("crosswindow_xcb")
