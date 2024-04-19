@@ -59,7 +59,7 @@ Int32 check_and_compute_value(...) {
 }
 
 Int32 get_query_result(QueryResult** res) {
-		/* some code here */
+        /* some code here */
 }
 
 /* res must be initialized as Null here! */
@@ -79,7 +79,7 @@ Int32 check_and_compute_value(...) {
 }
 
 void query_result_get(QueryResult** res) {
-		/* some code here */
+        /* some code here */
 }
 
 /* res is Null and now we can check for errors using it */
@@ -137,9 +137,9 @@ Below are examples of cases where one might use them :
 /* RETURN_IF is used when method does not return anything (void) */
 void logical_device_destroy(LogicalDevice* device) {
     RETURN_IF(!device, ERR_INVALID_ARGUMENTS);
-	
+    
     logical_device_deinit(device);
-		
+        
     /* always use FREE, NEW, ALLOCATE and REALLOCATE macros for memory management */
     FREE(device);
 }
@@ -152,7 +152,7 @@ LogicalDevice* logical_device_create(VkPhysicalDevice gpu) {
 
     LogicalDevice* idev = logical_device_init(dev, gpu);
     if(!dev) {
-	      PRINT_ERR(ERR_OBJECT_INITIALIZATION_FAILED);
+        PRINT_ERR(ERR_OBJECT_INITIALIZATION_FAILED);
         /* call destroy and not FREE! */
         logical_device_destroy(dev);
         return Null;
@@ -170,7 +170,7 @@ LogicalDevice* logical_device_create(VkPhysicalDevice gpu) {
 
     LogicalDevice* idev = logical_device_init(dev, gpu);
     GOTO_HANDLER_IF(!idev, INIT_FAILED, ERR_OBJECT_INITIALIZATION_FAILED);
-		
+        
     return idev;
 
 INIT_FAILED:
