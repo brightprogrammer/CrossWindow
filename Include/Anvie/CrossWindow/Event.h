@@ -30,11 +30,10 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#ifndef CROSSWINDOW_EVENT_H
-#define CROSSWINDOW_EVENT_H
+#ifndef ANVIE_CROSSWINDOW_EVENT_H
+#define ANVIE_CROSSWINDOW_EVENT_H
 
-#include <CrossWindow/Window.h>
-#include <Types.h>
+#include <Anvie/CrossWindow/Window.h>
 
 /**
  * @b Various types of events in CrossWindow.

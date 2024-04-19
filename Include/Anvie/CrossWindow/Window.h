@@ -30,10 +30,10 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#ifndef CROSSWINDOW_WINDOW_H
-#define CROSSWINDOW_WINDOW_H
+#ifndef ANVIE_CROSSWINDOW_WINDOW_H
+#define ANVIE_CROSSWINDOW_WINDOW_H
 
-#include <Types.h>
+#include <Anvie/Types.h>
 
 typedef struct XwWindowSize {
     Uint32 width;

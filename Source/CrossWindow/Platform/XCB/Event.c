@@ -32,8 +32,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#include <Common.h>
-#include <CrossWindow/Event.h>
+#include <Anvie/Common.h>
+#include <Anvie/CrossWindow/Event.h>
 
 /* local headers */
 #include "State.h"

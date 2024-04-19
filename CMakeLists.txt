@@ -17,11 +17,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_CLAGS} -ggdb -Wall -Wextra -Werror")
 
 # for getting install dirs
 include (GNUInstallDirs)
-set(CrossWindow_INCLUDE_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}/Anvie")
+set(CrossWindow_INCLUDE_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
 set(CrossWindow_LIB_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
 
 # install header files in platform specific include directories
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Include/" DESTINATION "include/Anvie")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Include/" DESTINATION ${CrossWindow_INCLUDE_DIR})
 
 # include the Include directory project-wide
 include_directories(Include)

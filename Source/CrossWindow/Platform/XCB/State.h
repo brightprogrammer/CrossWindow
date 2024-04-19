@@ -30,10 +30,10 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#ifndef CROSSWINDOW_PLATFORM_XCB_STATE_H
-#define CROSSWINDOW_PLATFORM_XCB_STATE_H
+#ifndef ANVIE_CROSSWINDOW_PLATFORM_XCB_STATE_H
+#define ANVIE_CROSSWINDOW_PLATFORM_XCB_STATE_H
 
-#include <CrossWindow/Event.h>
+#include <Anvie/CrossWindow/Event.h>
 
 /* xcb related headers */
 #include <xcb/xcb.h>
@@ -119,4 +119,4 @@ Bool xw_init_keyboard (void);
 Size xw_create_new_window_id (struct XwWindow *win);
 void xw_remove_window_id (Size window_id);
 
-#endif // CROSSWINDOW_PLATFORM_XCB_STATE_H
+#endif // ANVIE_CROSSWINDOW_PLATFORM_XCB_STATE_H

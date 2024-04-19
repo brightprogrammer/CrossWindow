@@ -33,7 +33,7 @@
 #ifndef CROSSWINDOW_PRIVATE_WINDOW_H
 #define CROSSWINDOW_PRIVATE_WINDOW_H
 
-#include <CrossWindow/Window.h>
+#include <Anvie/CrossWindow/Window.h>
 #include <xcb/xcb.h>
 
 typedef struct XwWindow {

@@ -30,8 +30,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#include <Common.h>
-#include <CrossWindow/Vulkan.h>
+#include <Anvie/Common.h>
+#include <Anvie/CrossWindow/Vulkan.h>
 
 /* local includes */
 #include "State.h"

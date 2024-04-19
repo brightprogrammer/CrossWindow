@@ -30,11 +30,10 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#ifndef CROSSWINDOW_VULKAN_H
-#define CROSSWINDOW_VULKAN_H
+#ifndef ANVIE_CROSSWINDOW_VULKAN_H
+#define ANVIE_CROSSWINDOW_VULKAN_H
 
-#include <CrossWindow/Window.h>
-#include <Types.h>
+#include <Anvie/CrossWindow/Window.h>
 #include <vulkan/vulkan.h>
 
 /* vulkan specific methods */

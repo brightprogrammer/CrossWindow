@@ -30,9 +30,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * */
 
-#include <Common.h>
-#include <CrossWindow/Window.h>
-#include <Types.h>
+#include <Anvie/Common.h>
+#include <Anvie/CrossWindow/Window.h>
 
 /* local headers */
 #include "State.h"
